@@ -1,0 +1,14 @@
+mk / monome kit
+
+complete sources for monome kit
+
+bootloader
+firmware
+	standard
+	analog
+	legacy
+	...
+circuit
+	logic
+	driver
+	keypad
