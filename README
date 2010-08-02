@@ -1,14 +1,35 @@
-mk / monome kit
+mk / monome kit: complete sources
 
-complete sources for monome kit
+2010. monome. brian crabtree. tehn@monome.org
+
+http://monome.org
+http://docs.monome.org/doku.php?id=tech:mk
+
+====================================================================
+
+bootloader licensed gnu gpl:
+	http://www.fsf.org/licenses/gpl.txt
+firmwares licensed cc by-nc-na:
+	http://creativecommons.org/licenses/by-nc-sa/3.0/
+hardware schematics and boards licensed cc by-nc-na:
+	http://creativecommons.org/licenses/by-nc-sa/3.0/
+
+most of these files are for non-commercial use-- please contact us
+directly with questions or discussion. we're reasonable people.
+
+please share any modifications you make! the community grows
+stronger with your participation.
+
+====================================================================
 
 bootloader
 firmware
-	standard
+	encoder
 	analog
-	legacy
+	digital
+	alt-versions
 	...
-circuit
+hardware
 	logic
 	driver
 	keypad
