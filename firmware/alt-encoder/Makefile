@@ -63,7 +63,7 @@ p: $(TARGET).hex
 
 
 boot: $(TARGET).hex
-	avrdude -p m325 -b 115200 -P /dev/tty.usbserial-$(SERIAL) -c arduino -e -V -D -U flash:w:$(TARGET).hex:i
+	avrdude -p m325 -b 115200 -P /dev/tty.usbserial-$(SERIAL) -c arduino -e -D -U flash:w:$(TARGET).hex:i
 
 
 ####### Compile

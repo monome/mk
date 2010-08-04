@@ -325,7 +325,7 @@ void to_all_led(char data1, char data2)
 			PORTE &= ~(ALL_SER);
 		
 		PORTE |= (E0_CLK);
-		_delay_us(1);
+		// _delay_us(1);
 		PORTE &= ~(E0_CLK);
 	}
 
@@ -336,7 +336,7 @@ void to_all_led(char data1, char data2)
 			PORTE &= ~(ALL_SER);
 
 		PORTE |= (E0_CLK);
-		_delay_us(1);
+		// _delay_us(1);
 		PORTE &= ~(E0_CLK);
 	}
 
@@ -359,7 +359,7 @@ void to_led(char data_all, char data1, char data2, char data3, char data4)
 		
 
 		PORTE |= (E0_CLK);
-		_delay_us(1);
+		// _delay_us(1);
 		PORTE &= ~(E0_CLK);
 	}
 
@@ -377,7 +377,7 @@ void to_led(char data_all, char data1, char data2, char data3, char data4)
 		else PORTE &= ~(E2_SER4);				
 
 		PORTE |= (E0_CLK);
-		_delay_us(1);
+		// _delay_us(1);
 		PORTE &= ~(E0_CLK);
 	}
 
@@ -398,7 +398,7 @@ int main(void)
 	uint8_t rx_timeout;
 	uint8_t rx[10];	// input buffer
 	uint8_t usb_state, sleep_state;
-	
+	uint8_t update_display;
 	uint8_t display[4][8];
 	
 	char enc[8];
@@ -504,6 +504,7 @@ int main(void)
 	rx_length = 1;
 	usb_state = 0;
 	sleep_state = 1;
+	update_display=0;
 
 	buttonInit();
 	output_read = 0;
@@ -639,7 +640,7 @@ int main(void)
 					
 						display[i2][i1] = rx[1];
 						
-						to_led(i1+1,display[0][i1],display[1][i1],display[2][i1],display[3][i1]);
+						update_display++;					
 					}
 					else if(rx_type == LEDCOL2) {			
 						i1 = rx[0] & 0x0F;
@@ -649,7 +650,7 @@ int main(void)
 						display[i2][i1] = rx[1];
 						display[i2+2][i1] = rx[2];
 					
-						to_led(i1+1,display[0][i1],display[1][i1],display[2][i1],display[3][i1]);
+						update_display++;					
 					}
 					else if(rx_type == LEDROW1) {			
 						i1 = 1 << (rx[0] & 0x07);
@@ -662,8 +663,7 @@ int main(void)
 							else display[i2][i3] &= ~i1;												
 						}
 						
-						for(i3=0;i3<8;i3++)
-							to_led(i3+1,display[0][i3],display[1][i3],display[2][i3],display[3][i3]);
+						update_display++;					
 					}
 					else if(rx_type == LEDROW2) {			
 						i1 = 1 << (rx[0] & 0x07);
@@ -679,8 +679,7 @@ int main(void)
 							else display[i2+1][i3] &= ~i1;							
 						}
 						
-						for(i3=0;i3<8;i3++)
-							to_led(i3+1,display[0][i3],display[1][i3],display[2][i3],display[3][i3]);
+						update_display++;					
 					}
 					else if(rx_type == FRAME) {
 						i1 = rx[0] & 0x03;
@@ -693,8 +692,7 @@ int main(void)
 							}
 						}
 						
-						for(i3=0;i3<8;i3++)
-							to_led(i3+1,display[0][i3],display[1][i3],display[2][i3],display[3][i3]);
+						update_display++;					
 					}
 					else if(rx_type == LEDON) {
 						i1 = rx[1] & 0x07;
@@ -703,7 +701,7 @@ int main(void)
 						
 						display[i3][i2] |= (1<<i1);
 						
-						to_led(i2+1,display[0][i2],display[1][i2],display[2][i2],display[3][i2]);					
+						update_display++;					
 					}
 					else if(rx_type == LEDOFF) {
 						i1 = rx[1] & 0x07;
@@ -712,7 +710,7 @@ int main(void)
 						
 						display[i3][i2] &= ~(1<<i1);
 						
-						to_led(i2+1,display[0][i2],display[1][i2],display[2][i2],display[3][i2]);					
+						update_display++;					
 					}
 					else if(rx_type == CLEAR) {
 						i1 = rx[0] & 0x01;
@@ -725,13 +723,22 @@ int main(void)
 							display[3][i2] = i1;
 						}
 				
-						for(i3=0;i3<8;i3++)
-							to_led(i3+1,display[0][i3],display[1][i3],display[2][i3],display[3][i3]);					
+						update_display++;					
 					}
 				}
 
 				PORTC |= C3_RD;
 				_delay_us(1);			// wait for valid data
+			}
+			
+			if(update_display) {
+				cli();
+				update_display = 0;
+				
+				for(i1=0;i1<8;i1++) {
+					to_led(i1+1,display[0][i1],display[1][i1],display[2][i1],display[3][i1]);
+				}
+				sei();
 			}
 
 			// ====================== check encoder deltas

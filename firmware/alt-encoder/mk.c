@@ -292,7 +292,7 @@ void to_all_led(char data1, char data2)
 			PORTE &= ~(ALL_SER);
 		
 		PORTE |= (E0_CLK);
-		_delay_us(1);
+		// _delay_us(1);
 		PORTE &= ~(E0_CLK);
 	}
 
@@ -303,7 +303,7 @@ void to_all_led(char data1, char data2)
 			PORTE &= ~(ALL_SER);
 
 		PORTE |= (E0_CLK);
-		_delay_us(1);
+		// _delay_us(1);
 		PORTE &= ~(E0_CLK);
 	}
 
@@ -326,7 +326,7 @@ void to_led(char data_all, char data1, char data2, char data3, char data4)
 		
 
 		PORTE |= (E0_CLK);
-		_delay_us(1);
+//		_delay_us(1);
 		PORTE &= ~(E0_CLK);
 	}
 
@@ -344,7 +344,7 @@ void to_led(char data_all, char data1, char data2, char data3, char data4)
 		else PORTE &= ~(E2_SER4);				
 
 		PORTE |= (E0_CLK);
-		_delay_us(1);
+//		_delay_us(1);
 		PORTE &= ~(E0_CLK);
 	}
 
@@ -756,18 +756,20 @@ int main(void)
 				
 						update_display++;
 					}
-					
-					if(update_display) {
-						update_display = 0;
-						
-						for(i1=0;i1<8;i1++) {
-							to_led(i1+1,display[0][i1],display[1][i1],display[2][i1],display[3][i1]);
-						}
-					}
 				}
 
 				PORTC |= C3_RD;
 				_delay_us(1);			// wait for valid data
+			}
+			
+			if(update_display) {
+				cli();
+				update_display = 0;
+				
+				for(i1=0;i1<8;i1++) {
+					to_led(i1+1,display[0][i1],display[1][i1],display[2][i1],display[3][i1]);
+				}
+				sei();
 			}
 
 			// ====================== check encoder deltas
