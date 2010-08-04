@@ -5,8 +5,11 @@ LDFLAGS = -Wl,-Map=$(TARGET).map,--cref
 OBJ2HEX=avr-objcopy 
 
 
+#### enter your serial number below
+#### for windows users, enter com port, for example SERIAL = COM4
 
-SERIAL = mk000001
+SERIAL = /dev/tty.usbserial-mk000001
+
 
 
 
@@ -63,7 +66,7 @@ p: $(TARGET).hex
 
 
 boot: $(TARGET).hex
-	avrdude -p m325 -b 115200 -P /dev/tty.usbserial-$(SERIAL) -c arduino -e -D -U flash:w:$(TARGET).hex:i
+	avrdude -p m325 -b 115200 -P $(SERIAL) -c arduino -e -D -U flash:w:$(TARGET).hex:i
 
 
 ####### Compile
