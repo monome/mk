@@ -66,7 +66,7 @@ aux-version: 0
 #define B7_USB 0x80
 
 // tuning
-#define OUTPUT_BUFFER_LENGTH 80
+#define OUTPUT_BUFFER_LENGTH 200
 #define KEY_REFRESH_RATE 25
 #define AUX_REFRESH_RATE 5
 #define RX_STARVE 20
@@ -129,7 +129,7 @@ ISR(TIMER0_COMP_vect)
 		button_last[i1+16] = button_current[i1+16];
 		button_last[i1+24] = button_current[i1+24];
 		
-		_delay_us(5);				// wait for voltage fall! due to high resistance pullup
+		_delay_us(2);				// wait for voltage fall! due to high resistance pullup
 		PORTE |= (E7_LD);	
 		_delay_us(1);
 
@@ -239,39 +239,41 @@ ISR(TIMER0_COMP_vect)
 // ===============================================================
 ISR(TIMER1_COMPA_vect)
 {
-	n1 = PINA;
-	enc_now[0] = n1 & 0x03;
-	enc_delta[0] += map[enc_prev[0]][enc_now[0]];
-	enc_prev[0] = enc_now[0];
+	if(port_enable) {
+		n1 = PINA;
+		enc_now[0] = n1 & 0x03;
+		enc_delta[0] += map[enc_prev[0]][enc_now[0]];
+		enc_prev[0] = enc_now[0];
 	
-	enc_now[1] = (n1 & 0x0C)>>2;
-	enc_delta[1] += map[enc_prev[1]][enc_now[1]];
-	enc_prev[1] = enc_now[1];
+		enc_now[1] = (n1 & 0x0C)>>2;
+		enc_delta[1] += map[enc_prev[1]][enc_now[1]];
+		enc_prev[1] = enc_now[1];
 	
-	enc_now[2] = (n1 & 0x30)>>4;
-	enc_delta[2] += map[enc_prev[2]][enc_now[2]];
-	enc_prev[2] = enc_now[2];
+		enc_now[2] = (n1 & 0x30)>>4;
+		enc_delta[2] += map[enc_prev[2]][enc_now[2]];
+		enc_prev[2] = enc_now[2];
 	
-	enc_now[3] = (n1 & 0xC0)>>6;
-	enc_delta[3] += map[enc_prev[3]][enc_now[3]];
-	enc_prev[3] = enc_now[3];
+		enc_now[3] = (n1 & 0xC0)>>6;
+		enc_delta[3] += map[enc_prev[3]][enc_now[3]];
+		enc_prev[3] = enc_now[3];
 	
-	n1 = PINF;
-	enc_now[4] = n1 & 0x03;
-	enc_delta[4] += map[enc_prev[4]][enc_now[4]];
-	enc_prev[4] = enc_now[4];
+		n1 = PINF;
+		enc_now[4] = n1 & 0x03;
+		enc_delta[4] += map[enc_prev[4]][enc_now[4]];
+		enc_prev[4] = enc_now[4];
 	
-	enc_now[5] = (n1 & 0x0C)>>2;
-	enc_delta[5] += map[enc_prev[5]][enc_now[5]];
-	enc_prev[5] = enc_now[5];
+		enc_now[5] = (n1 & 0x0C)>>2;
+		enc_delta[5] += map[enc_prev[5]][enc_now[5]];
+		enc_prev[5] = enc_now[5];
 	
-	enc_now[6] = (n1 & 0x30)>>4;
-	enc_delta[6] += map[enc_prev[6]][enc_now[6]];
-	enc_prev[6] = enc_now[6];
+		enc_now[6] = (n1 & 0x30)>>4;
+		enc_delta[6] += map[enc_prev[6]][enc_now[6]];
+		enc_prev[6] = enc_now[6];
 	
-	enc_now[7] = (n1 & 0xC0)>>6;
-	enc_delta[7] += map[enc_prev[7]][enc_now[7]];
-	enc_prev[7] = enc_now[7];
+		enc_now[7] = (n1 & 0xC0)>>6;
+		enc_delta[7] += map[enc_prev[7]][enc_now[7]];
+		enc_prev[7] = enc_now[7];
+	}
 					
 	TCNT1 = 0;
 }
@@ -793,6 +795,7 @@ int main(void)
 
 			// ====================== check/send output data
 			
+			cli();
 			PORTD = 0;                      // setup PORTD for output
 			DDRD = 0xFF;
 
@@ -805,7 +808,7 @@ int main(void)
 				
 				output_read = (output_read + 1) % OUTPUT_BUFFER_LENGTH;
 			}
-			
+			sei();
 			
 			// ====================== check usb/sleep status
 			if(PINC & C4_PWREN) {

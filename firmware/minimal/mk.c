@@ -1,6 +1,6 @@
 /************************************************************************
 
-version: encoders
+version: minimal
 aux-version: 0
 
 *************************************************************************
@@ -17,13 +17,6 @@ osc /sys/grids x
 AUXIN (3 bytes): (13<<4) & x, y, z
 	where x = 0: query request, ask device for query return (firmware version)
 osc /sys/aux/version
-	where x = 1: enable/disable ports, y and z = ports, 8bit each
-osc /sys/aux/enable y z
-	where x = 2: set port direction, y and z = ports, 8bit each
-osc /sys/aux/direction y z
-	where x = 3: set digital output states, y and z = ports, 8 bit each
-osc /sys/aux/state y z
-	
 
 	
 from device:
@@ -31,12 +24,6 @@ from device:
 AUXOUT (3 bytes): (14<<4) & x, y, z
 	where x = 0: query return, y = version
 osc /sys/aux/version y
-	where x = 3: analog, y = port, z = value
-osc /sys/aux/analog y z
-	where x = 2: digital, y = number, z = state
-osc /sys/aux/digital y z
-	where x = 1: encoder, y = encoder number, z = change (two's complement, signed char)
-osc /sys/aux/encoder y z (z is signed char)
 
 
 adc - PORTF
@@ -105,8 +92,7 @@ io - PORTA
 
 // tuning
 #define OUTPUT_BUFFER_LENGTH 200
-#define KEY_REFRESH_RATE 25
-#define AUX_REFRESH_RATE 5
+#define KEY_REFRESH_RATE 55
 #define RX_STARVE 20
 
 // eeprom locations
@@ -140,12 +126,6 @@ volatile uint8_t output_buffer[OUTPUT_BUFFER_LENGTH];
 volatile uint8_t output_write;
 volatile uint8_t output_read;
 volatile uint8_t num_grids, port_enable;
-
-
-// aux (encoder) globals
-char map[4][4] = { {0,1,-1,0}, {-1,0,0,1}, {1,0,0,-1}, {0,-1,1,0} };
-volatile uint8_t enc_now[8], enc_prev[8];
-volatile char enc_delta[8];
 
 
 
@@ -267,49 +247,6 @@ ISR(TIMER0_COMP_vect)
 	TCNT0 = 0;
 }
 
-// AUX INT
-// ===============================================================
-// ===============================================================
-ISR(TIMER1_COMPA_vect)
-{
-	if(port_enable) {
-		n1 = PINA;
-		enc_now[0] = n1 & 0x03;
-		enc_delta[0] += map[enc_prev[0]][enc_now[0]];
-		enc_prev[0] = enc_now[0];
-	
-		enc_now[1] = (n1 & 0x0C)>>2;
-		enc_delta[1] += map[enc_prev[1]][enc_now[1]];
-		enc_prev[1] = enc_now[1];
-	
-		enc_now[2] = (n1 & 0x30)>>4;
-		enc_delta[2] += map[enc_prev[2]][enc_now[2]];
-		enc_prev[2] = enc_now[2];
-	
-		enc_now[3] = (n1 & 0xC0)>>6;
-		enc_delta[3] += map[enc_prev[3]][enc_now[3]];
-		enc_prev[3] = enc_now[3];
-	
-		n1 = PINF;
-		enc_now[4] = n1 & 0x03;
-		enc_delta[4] += map[enc_prev[4]][enc_now[4]];
-		enc_prev[4] = enc_now[4];
-	
-		enc_now[5] = (n1 & 0x0C)>>2;
-		enc_delta[5] += map[enc_prev[5]][enc_now[5]];
-		enc_prev[5] = enc_now[5];
-	
-		enc_now[6] = (n1 & 0x30)>>4;
-		enc_delta[6] += map[enc_prev[6]][enc_now[6]];
-		enc_prev[6] = enc_now[6];
-	
-		enc_now[7] = (n1 & 0xC0)>>6;
-		enc_delta[7] += map[enc_prev[7]][enc_now[7]];
-		enc_prev[7] = enc_now[7];
-	}
-	
-	TCNT1 = 0;
-}
 
 
 // send packet to all led drivers
@@ -402,9 +339,7 @@ int main(void)
 	uint8_t usb_state, sleep_state;
 	uint8_t update_display;
 	uint8_t display[4][8];
-	
-	char enc[8];
-	
+		
 	uint8_t packet_length[NUM_TYPES];
 	
 	// setup packet length
@@ -510,25 +445,12 @@ int main(void)
 
 	buttonInit();
 	output_read = 0;
-	output_write = 0;
-		
-	for(i1=0;i1<8;i1++) {
-		enc_delta[i1] = 0;
-		enc_now[i1] = 0;
-		enc_prev[i1] = 0;
-	}
-	
+	output_write = 0;	
 		
 	// keypad timer init
 	TCCR0A |= (1<<CS02) | (1<<CS00); // timer0 on, prescale clk/1024 (p95)
 	TIMSK0 |= (1 << OCIE0A);// | (1<< TOIE0);  // enable timer0 interrupts
 	OCR0A = KEY_REFRESH_RATE;
-	
-	// aux timer init
-	TCCR1A = 0;
-	TCCR1B |= (1<<CS12);// | (1<<CS10); // clk/256
-	TIMSK1 |= (1 << OCIE1A);
-	OCR1A = AUX_REFRESH_RATE;
 	
 	// enable ints
 	sei();
@@ -605,14 +527,6 @@ int main(void)
 							output_buffer[output_write+1] = FW_VERSION;
 							output_buffer[output_write+2] = 0;
 							output_write = (output_write + 3) % OUTPUT_BUFFER_LENGTH;
-						}
-						else if(i1==1) {	// set port enables, write eeprom
-							while(EECR & (1<<EEWE));
-							port_enable = rx[1];
-							EEAR = EEPROM_PORT_ENABLE;
-							EEDR = port_enable;
-							EECR |= (1<<EEMWE);
-							EECR |= (1<<EEWE);
 						}
 					}
 					else if(rx_type == INTENSITY) {
@@ -743,24 +657,6 @@ int main(void)
 				sei();
 			}
 
-			// ====================== check encoder deltas
-			
-			cli();
-			for(i1=0;i1<8;i1++) {
-				enc[i1] = enc_delta[i1];
-				enc_delta[i1] &= 3;
-			}	
-			sei();
-			
-			for(i1=0;i1<8;i1++) {
-				enc[i1] >>= 2;
-				if(enc[i1] && (port_enable & (1 << i1))) {
-					output_buffer[output_write] = (AUXOUT << 4) + 1;
-					output_buffer[output_write+1] = i1;
-					output_buffer[output_write+2] = enc[i1];
-					output_write = (output_write + 3) % OUTPUT_BUFFER_LENGTH;
-				}
-			}
 
 			// ====================== check/send output data
 			
