@@ -68,6 +68,18 @@ p: $(TARGET).hex
 boot: $(TARGET).hex
 	avrdude -p m325 -b 115200 -P $(SERIAL) -c arduino -e -D -U flash:w:$(TARGET).hex:i
 
+0x0	: 
+	avrdude -p m325 -b 115200 -P $(SERIAL) -c arduino -e -D -U flash:w:mk0x0.hex:i
+
+8x8: 
+	avrdude -p m325 -b 115200 -P $(SERIAL) -c arduino -e -D -U flash:w:mk8x8.hex:i
+
+16x8:
+	avrdude -p m325 -b 115200 -P $(SERIAL) -c arduino -e -D -U flash:w:mk16x8.hex:i
+
+16x16:
+	avrdude -p m325 -b 115200 -P $(SERIAL) -c arduino -e -D -U flash:w:mk16x16.hex:i
+
 
 ####### Compile
 
