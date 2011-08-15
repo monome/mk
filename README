@@ -22,14 +22,10 @@ stronger with your participation.
 
 ====================================================================
 
-bootloader
-firmware
-	encoder
-	analog
-	digital
-	alt-versions
-	...
-hardware
-	logic
-	driver
-	keypad
+firmware descriptions:
+
+important note: folders with a "-old" in the name are intended for use with old 40h grids, which require a rotated orientation when tiling multiple grids together. the code performs this rotation. do not use the "-old" firmwares with new mk grids.
+
+default > the normal, most basic firmware. no auxiliary function.
+encoders > includes support for 8 encoders, hooked up to the aux port. see docs for hookup.
+tilt > support for tilt sensor. implemented, but waiting for serialosc support. coming very soon.
