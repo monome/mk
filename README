@@ -28,4 +28,4 @@ important note: folders with a "-old" in the name are intended for use with old 
 
 default > the normal, most basic firmware. no auxiliary function.
 encoders > includes support for 8 encoders, hooked up to the aux port. see docs for hookup.
-tilt > support for tilt sensor. implemented, but waiting for serialosc support. coming very soon.
+tilt > support for tilt sensor, x/y hooked up to port A 0/1. see docs.
