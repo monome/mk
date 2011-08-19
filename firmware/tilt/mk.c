@@ -1,70 +1,6 @@
 /************************************************************************
-
 version: tilt
-
 *************************************************************************
-
----------------------------------------------------------------------
-8 tilt
----------------------------------------------------------------------
-	
-to device:
-----------
-
-OSC:
-/tilt/active
-	mapped to 0x80
-/tilt/set n [0/1]
-	mapped to 0x81 and 0x82
-
-0x80 tilt / state request
-bytes: 1
-structure: [0x80]
-description: request active states. device will reply with list.
-
-0x81 tilt / set state on
-bytes: 2
-structure: [0x81, n]
-n = number
-	0-7
-description: enable individual tilt sensor.
-
-0x82 tilt / set state off
-bytes: 2
-structure: [0x82, n]
-n = number
-	0-7
-description: disable individual tilt sensor.
-
-
-from device:
-------------
-
-OSC:
-/tilt/active d
-	mapped to 0x80
-/tilt n x y z
-	mapped to 0x81
-
-0x80 tilt / active response
-bytes: 9
-structure: [0x80, d]
-d = state (8 bits)
-	up to 8 tilt sensors
-description: report which tilt sensors are active
-
-0x81 tilt
-bytes 8
-structure: [0x81, n, xh, xl, yh, yl, zh, zl]
-n = sensor number (support for multiple accelerometers)
-description: 16-bit tilt input for x, y, z axis
-
-
-
-
-
-adc - PORTF
-io - PORTA
 */
 
 #define F_CPU 16000000UL
@@ -77,13 +13,13 @@ io - PORTA
 #include "button.h"
 
 
-#define SIZE_X 8
-#define SIZE_Y 8
-#define GRIDS 1
+#define SIZE_X 16
+#define SIZE_Y 16
+#define GRIDS 4
 
 
 // firmware version: tilt
-#define FW_VERSION 1
+#define FW_VERSION 2
 
 // eeprom location
 #define EEPROM_PORT_ENABLE 0
@@ -109,6 +45,10 @@ io - PORTA
 #define _LED_COL 0x16
 #define _LED_INT 0x17
 
+#define _TILT_GET_STATE 0x80
+#define _TILT_SET_STATE_ON 0x81
+#define _TILT_SET_STATE_OFF 0x82
+
 
 const uint8_t packet_length[256] = {
 	1,1,33,1,4,1,3,1,3,0,0,0,0,0,0,1,
@@ -119,7 +59,7 @@ const uint8_t packet_length[256] = {
 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+	1,2,2,0,0,0,0,0,0,0,0,0,0,0,0,0,
 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -202,12 +142,12 @@ uint8_t output_buffer[OUTPUT_BUFFER_LENGTH];
 uint8_t output_write;
 uint8_t output_read;
 
-volatile uint8_t an[2][2];
-volatile uint16_t a;
-volatile uint8_t an_bucket[2][8];
+volatile int16_t an[2][2];
+volatile int16_t a;
+volatile int16_t an_bucket[2][8];
 volatile uint8_t an_num;
 volatile uint8_t an_index;
-volatile uint32_t an_accum[2];
+volatile int32_t an_accum[2];
 
 
 
@@ -289,7 +229,7 @@ ISR(TIMER1_COMPA_vect)
 	if(port_enable) {
 		an[an_num][1] = an[an_num][0];
 		an_accum[an_num] -= an_bucket[an_num][an_index];
-		a = ADCW >> 2;
+		a = (ADCW>>2) - 128;
 		an_bucket[an_num][an_index] = a;
 		an_accum[an_num] += a;
 		an[an_num][0] = an_accum[an_num] >> 3;
@@ -297,17 +237,22 @@ ISR(TIMER1_COMPA_vect)
 		// send tilt,val via usb
 	
 		if(an[an_num][0] != an[an_num][1]) {
-			output_buffer[output_write] = (14 << 4) + an_num;
+			output_buffer[output_write] = 0x81;
 			output_write++;
-			output_buffer[output_write] = an[an_num][0];
+			output_buffer[output_write] = 0;
 			output_write++;
-			
-			//////////////////////////////////////////
-			////////////////////////////////////////
-			/////////////////////////////////////////
-			//////////////////////////////////////////
-			/////////////////////////////////////////
-			// protocol fix here
+			output_buffer[output_write] = an[0][0] & 0xff;
+			output_write++;
+			output_buffer[output_write] = an[0][0] >> 8;
+			output_write++;
+			output_buffer[output_write] = an[1][0] & 0xff;
+			output_write++;
+			output_buffer[output_write] = an[1][0] >> 8;
+			output_write++;
+			output_buffer[output_write] = 0;
+			output_write++;
+			output_buffer[output_write] = 0;
+			output_write++;
 		}
 	
 		if(an_num==1) {
@@ -372,8 +317,8 @@ int main(void)
 	DDRA = 0;
 	DDRF = 0;
 	
-	PORTA = 0xff;	// activate internal pullups
-	PORTF = 0xff;                          
+	PORTA = 0;//xff;	// activate internal pullups
+	PORTF = 0;//xff;                          
 	
 	for(i1=0;i1<32;i1++) id[i1]=0;
 	strcpy(id,"mk");
@@ -446,7 +391,7 @@ int main(void)
 	// init ADC
 	//ADMUX = (1<<ADLAR);	// set left align (for 8 bit mode)
 	ADMUX = (1<<MUX0);
-	ADCSRA = (1<<ADEN) | (1<<ADPS1);// | (1<<ADATE);	// turn on ADC, prescale
+	ADCSRA = (1<<ADEN) | (1<<ADPS2);// | (1<<ADATE);	// turn on ADC, prescale
 	//DIDR0 = 0x03;	// disable digital inputs on ADC0-1
 	ADCSRA |= (1<<ADSC);		// start conversion
 	an[0][0] = an[0][1] = an[1][0] = an[1][1] = 127;
@@ -560,6 +505,14 @@ int main(void)
 						output_write++;
 						output_buffer[output_write] = SIZE_Y;
 						output_write++;
+					}
+					
+					
+					else if(rx_type == _TILT_SET_STATE_ON) {
+						port_enable = 255;
+					}
+					else if(rx_type == _TILT_SET_STATE_OFF) {
+						port_enable = 0;
 					}
 					
 					
@@ -707,13 +660,6 @@ int main(void)
 							output_write++;
 							output_buffer[output_write] = i2;
 							output_write++;
-
-							// PORTC |= C2_WR;
-							// PORTD = i4 << 4;
-							// PORTC &= ~(C2_WR);
-							// PORTC |= C2_WR;
-							// PORTD = ((15-i1)<<4) | i2;
-							// PORTC &= ~(C2_WR);
 						}
 					}
 
@@ -770,13 +716,6 @@ int main(void)
 							output_write++;
 							output_buffer[output_write] = i2 + 8;
 							output_write++;
-
-							// PORTC |= C2_WR;
-							// PORTD = i4 << 4;
-							// PORTC &= ~(C2_WR);
-							// PORTC |= C2_WR;
-							// PORTD = ((15-i1)<<4) | (i2+8);
-							// PORTC &= ~(C2_WR);
 						}
 					}
 
