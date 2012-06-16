@@ -105,7 +105,7 @@ const uint8_t packet_length[256] = {
 
 // tuning
 #define OUTPUT_BUFFER_LENGTH 256
-#define KEY_REFRESH_RATE 15
+#define KEY_REFRESH_RATE 10
 #define RX_STARVE 20
 
 static const uint8_t rev[] =
