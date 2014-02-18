@@ -105,7 +105,7 @@ const uint8_t packet_length[256] = {
 
 // tuning
 #define OUTPUT_BUFFER_LENGTH 256
-#define KEY_REFRESH_RATE 10
+#define KEY_REFRESH_RATE 2
 #define RX_STARVE 20
 
 static const uint8_t rev[] =
@@ -514,9 +514,9 @@ int main(void)
 				button_last[keypad_row+16] = button_current[keypad_row+16];
 				button_last[keypad_row+24] = button_current[keypad_row+24];
 
-				_delay_us(2);				// wait for voltage fall! due to high resistance pullup
+				_delay_us(4);				// wait for voltage fall! due to high resistance pullup
 				PORTE |= (E7_LD);	
-				_delay_us(1);
+				_delay_us(2);
 
 				for(i2=0;i2<8;i2++) {
 					// =================================================
