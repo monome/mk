@@ -15,9 +15,9 @@ io - PORTA
 #include "button.h"
 
 
-#define SIZE_X 16
-#define SIZE_Y 16
-#define GRIDS 4
+#define SIZE_X 8
+#define SIZE_Y 8
+#define GRIDS 1
 
 
 // firmware version: encoders
