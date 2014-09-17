@@ -15,9 +15,9 @@ io - PORTA
 #include "button.h"
 
 
-#define SIZE_X 16
-#define SIZE_Y 16
-#define GRIDS 4
+#define SIZE_X 8
+#define SIZE_Y 8
+#define GRIDS 1
 
 
 // firmware version: encoders
@@ -44,24 +44,18 @@ io - PORTA
 #define _LED_COL 0x16
 #define _LED_INT 0x17
 
+#define _LED_SETX 0x18
+#define _LED_ALLX 0x19
+#define _LED_MAPX 0x1A
+#define _LED_ROWX 0x1B
+#define _LED_COLX 0x1C
 
-const uint8_t packet_length[256] = {
-	1,1,33,1,4,1,3,1,3,0,0,0,0,0,0,1,
-	3,3,1,1,11,4,4,2,0,0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+
+
+
+const uint8_t packet_length[32] = {
+	1,1,33,1, 4,1,3,1,3,0, 0,0,0,0,0,1,
+	3,3, 1,1,11,4,4,2,4,2,35,7,7,0,0,0
 };
 
 // protocol outgoing
@@ -105,7 +99,7 @@ const uint8_t packet_length[256] = {
 
 // tuning
 #define OUTPUT_BUFFER_LENGTH 256
-#define KEY_REFRESH_RATE 10
+#define KEY_REFRESH_RATE 2
 #define RX_STARVE 20
 
 static const uint8_t rev[] =
@@ -222,13 +216,11 @@ ISR(TIMER0_COMP_vect)
 int main(void)
 {
 	uint8_t i1,i2,i3,i4;
-	uint8_t starve;
 	uint8_t rx_count;
-	uint8_t rx_length;
+	uint8_t rx_length = 100;
 	uint8_t rx_type;
 	uint8_t rx_timeout;
 	uint8_t rx[66];	// input buffer
-	uint8_t usb_state, sleep_state;
 	uint8_t update_display;
 	uint8_t display[4][8];
 	
@@ -237,9 +229,8 @@ int main(void)
 	uint8_t keypad_row;
 	
 	uint8_t output_buffer[OUTPUT_BUFFER_LENGTH];
-	uint8_t output_write;
-	uint8_t output_read;
-		
+	uint8_t output_write = 0;
+
 
 	// pin assignments
 	DDRE = 0xff;	// all output
@@ -278,21 +269,22 @@ int main(void)
 	to_all_led(10, 11);
 	to_led(8,33,0,0,0); to_led(7,18,0,0,0); to_led(6,12,0,0,0);
 	_delay_ms(64);
-	to_all_led(10, 9);
-	to_led(8,64,0,0,0); to_led(7,64,0,0,0); to_led(6,33,0,0,0); to_led(5,30,0,0,0);
-	_delay_ms(64);
-	to_all_led(10, 7);
-	to_led(8,0,0,1,0); to_led(7,0,0,1,0); to_led(6,0,0,1,0); to_led(5,128,0,0,0); to_led(4,64,0,0,0); to_led(3,33,0,0,0); to_led(2,30,0,0,0);
-	_delay_ms(64);
-	to_all_led(10, 5);
-	to_led(8,0,192,16,0); to_led(7,0,56,16,0); to_led(6,0,7,8,0); to_led(5,0,0,8,0); to_led(4,0,0,4,0); to_led(3,0,0,4,0); to_led(2,0,0,2,0); to_led(1,0,0,1,0);
-	_delay_ms(64);
-	to_all_led(10, 3);
-	to_led(8,0,0,128,32); to_led(7,0,0,128,16); to_led(6,0,0,128,16); to_led(5,0,0,128,8); to_led(4,0,0,64,6); to_led(3,0,128,64,1); to_led(2,0,112,64,0); to_led(1,0,15,32,0);
-	_delay_ms(64);
-	to_all_led(10, 1);
-	to_led(8,0,0,0,0); to_led(7,0,0,0,0); to_led(6,0,0,0,0); to_led(5,0,0,0,0); to_led(4,0,0,0,128); to_led(3,0,0,0,128); to_led(2,0,0,0,64); to_led(1,0,0,0,48);
-	_delay_ms(64);
+
+	// to_all_led(10, 9);
+	// to_led(8,64,0,0,0); to_led(7,64,0,0,0); to_led(6,33,0,0,0); to_led(5,30,0,0,0);
+	// _delay_ms(64);
+	// to_all_led(10, 7);
+	// to_led(8,0,0,1,0); to_led(7,0,0,1,0); to_led(6,0,0,1,0); to_led(5,128,0,0,0); to_led(4,64,0,0,0); to_led(3,33,0,0,0); to_led(2,30,0,0,0);
+	// _delay_ms(64);
+	// to_all_led(10, 5);
+	// to_led(8,0,192,16,0); to_led(7,0,56,16,0); to_led(6,0,7,8,0); to_led(5,0,0,8,0); to_led(4,0,0,4,0); to_led(3,0,0,4,0); to_led(2,0,0,2,0); to_led(1,0,0,1,0);
+	// _delay_ms(64);
+	// to_all_led(10, 3);
+	// to_led(8,0,0,128,32); to_led(7,0,0,128,16); to_led(6,0,0,128,16); to_led(5,0,0,128,8); to_led(4,0,0,64,6); to_led(3,0,128,64,1); to_led(2,0,112,64,0); to_led(1,0,15,32,0);
+	// _delay_ms(64);
+	// to_all_led(10, 1);
+	// to_led(8,0,0,0,0); to_led(7,0,0,0,0); to_led(6,0,0,0,0); to_led(5,0,0,0,0); to_led(4,0,0,0,128); to_led(3,0,0,0,128); to_led(2,0,0,0,64); to_led(1,0,0,0,48);
+	// _delay_ms(64);
 	
 
 	// end startup sequence
@@ -308,12 +300,9 @@ int main(void)
 
 	i1 = i2 = i3 = i4 = 0;
 	rx_count = rx_type = rx_timeout = 0;
-	rx_length = 1;
-	usb_state = 0;
-	sleep_state = 1;
+	rx_length = 100;
 	update_display=0;
 	keypad_row = 0;
-	output_read = 0;
 	output_write = 0;
 	
 
@@ -321,68 +310,60 @@ int main(void)
 		
 		
 	// keypad timer init
-	TCCR0A |= (1<<CS02) | (1<<CS00); // timer0 on, prescale clk/1024 (p95)
+	TCCR0A |= (1<<CS02);// | (1<<CS00); // timer0 on, prescale clk/1024 (p95)
 	TIMSK0 |= (1 << OCIE0A);// | (1<< TOIE0);  // enable timer0 interrupts
 	OCR0A = KEY_REFRESH_RATE;
 	
 	// enable ints
 	sei();
 	
-
 	// main loop
 	while(1) {
 		// ========================= ASLEEP:
-		if(sleep_state) {	 			
-			if(!(PINC & C4_PWREN)) {
-				sleep_state = 0;				
+		// if(sleep_state) {	 			
+		// 	if(!(PINC & C4_PWREN)) {
+		// 		sleep_state = 0;				
 
-				to_all_led(12, 1);		// out of shutdown
-				for(i1=0;i1<64;i1++) {	// fade in
-					to_all_led(10, (i1)/4);
-					_delay_ms(8);
-				}
-			} 
+		// 		to_all_led(12, 1);		// out of shutdown
+		// 		for(i1=0;i1<64;i1++) {	// fade in
+		// 			to_all_led(10, (i1)/4);
+		// 			_delay_ms(8);
+		// 		}
+		// 	} 
 
-			_delay_ms(255);
+		// 	_delay_ms(255);
 			
-			TIMSK0 |= (1 << OCIE0A);// | (1<< TOIE0);  // enable timer0 interrupts
-		}
+		// 	TIMSK0 |= (1 << OCIE0A);// | (1<< TOIE0);  // enable timer0 interrupts
+		// }
 		
 		// ========================== NORMAL:
-		else {
+		
+		if(1) {
 			// ====================== check/read incoming serial	
 			PORTD = 0;                  // setup PORTD for input
 			DDRD = 0;                   // input w/ tristate
 
-			if(rx_timeout > 40 ) {
-				rx_count = 0;
-			}
-			else rx_timeout++;
-
-			starve = 0;
 			
-			while((PINC & C1_RXF) == 0 && starve < RX_STARVE) {
-				starve++;				// make sure we process keypad data...
-										// if we process more input bytes than RX_STARVE
-										// we'll jump to sending out waiting keypad bytes
-										// and then continue
+			while((PINC & C1_RXF) == 0) {
 				PORTC &= ~(C3_RD);
 				_delay_us(1);			// wait for valid data
 				rx[rx_count] = PIND;
+				PORTC |= C3_RD;
 				
 				if(rx_count == 0) {		// get packet length if reading first byte
-					rx_type = rx[0];
-					if(packet_length[rx_type]) {
-						rx_length = packet_length[rx_type];
-						rx_count++;
-						rx_timeout = 0;
+					if(rx[0]<32) {
+						rx_type = rx[0];
+						if(packet_length[rx_type]) {
+							rx_length = packet_length[rx_type];
+							rx_count++;
+							rx_timeout = 0;
+						}
 					}
 				}
 				else rx_count++;
 
 				if(rx_count == rx_length) {
 					rx_count = 0;
-					rx_length = 0;
 					
 					if(rx_type == _SYS_QUERY) {
 						output_buffer[output_write] = _SYS_QUERY_RESPONSE;
@@ -398,8 +379,11 @@ int main(void)
 						output_write++;
 						output_buffer[output_write] = GRIDS;
 						output_write++;
+
+						// ok = 1;
 						
 					}
+
 					else if(rx_type == _SYS_QUERY_ID) {
 						output_buffer[output_write] = _SYS_ID;
 						output_write++;
@@ -437,7 +421,7 @@ int main(void)
 						display[i1][i2] |= (1<<i3);
 
 						update_display++;
-					}if(rx_type == _LED_ALL0) {
+					} else if(rx_type == _LED_ALL0) {
 						// _LED_ALL0 //////////////////////////////////////////////
 						for(i1=0;i1<4;i1++) {
 							for(i2=0;i2<8;i2++) {
@@ -488,18 +472,76 @@ int main(void)
 						// _LED_INT ///////////////////////////////////////////////
 						i1 = rx[1] & 0x0f;
 						to_all_led(10,i1);
-					}
-				}
+					} else if(rx_type == _LED_MAPX) {
+						i1 = (rx[1] >> 3) + (rx[2] >> 3)*2;
 
-				PORTC |= C3_RD;
-			}
-			
-			if(update_display) {
-				update_display = 0;
-				for(i1=0;i1<8;i1++) {
-					to_led(i1+1,display[0][i1],display[1][i1],display[2][i1],display[3][i1]);
+						for(i2=0;i2<8;i2++) {
+							i4 = 1 << i2;
+							for(i3=0;i3<4;i3++) {
+								if((rx[3+(i2*4)+i3] >> 4) > 7) display[i1][7-(i3*2)] |= i4;
+								else display[i1][7-(i3*2)] &= ~i4;
+
+								if((rx[3+(i2*4)+i3] & 0xf) > 7) display[i1][7-(i3*2+1)] |= i4;
+								else display[i1][7-(i3*2+1)] &= ~i4;											
+							}
+						}
+
+						update_display++;
+					} else if(rx_type == _LED_ALLX) {
+						// _LED_ALLX //////////////////////////////////////////////
+						i2 = (rx[1] > 7) * 255;
+						for(i3=0;i3<4;i3++)
+							for(i1=0;i1<8;i1++)
+								display[i3][i1]=i2;
+
+						update_display++;
+					} else if(rx_type == _LED_SETX) {
+						// _LED_SETX //////////////////////////////////////////////
+						i1 = (rx[1] >> 3) + ((rx[2] >> 3)*2); 
+						i2 = 7-(rx[1] & 0x07);
+						i3 = rx[3] > 7;
+						if(i3)
+							display[i1][i2] |= (1<<(rx[2] & 0x07));
+						else
+							display[i1][i2] &= ~(1<<(rx[2] & 0x07));
+						update_display++;
+					} else if(rx_type == _LED_ROWX) {
+						// _LED_ROW ///////////////////////////////////////////////
+						// y offset is rx[2]
+						i1 = (rx[1] >> 3) + (rx[2] >> 3)*2;
+						i2 = 1 << (rx[2] & 0x07);
+
+						for(i3=0;i3<4;i3++) {
+							if((rx[3+i3] >> 4)> 7) display[i1][7-(i3*2)] |= i2;
+							else display[i1][7-(i3*2)] &= ~i2;
+
+							if((rx[3+i3] & 0xf) > 7) display[i1][7-(i3*2+1)] |= i2;
+							else display[i1][7-(i3*2+1)] &= ~i2;												
+						}
+						update_display++;
+					} else if(rx_type == _LED_COLX) {
+						// _LED_COL ///////////////////////////////////////////////
+						// x offset is rx[1]
+						i1 = (rx[1] >> 3) + (rx[2] >> 3)*2;
+						
+						for(i2=0;i2<4;i2++) {
+							if((rx[3+i2] >> 4) > 7) 
+								display[i1][7-(rx[1] & 0x07)] |= 1 << (i2*2);
+							else 
+								display[i1][7-(rx[1] & 0x07)] &= ~(1 << (i2*2));
+
+							if((rx[3+i2] & 0xf) > 7)
+								display[i1][7-(rx[1] & 0x07)] |= 1 << (i2*2+1);
+							else
+								display[i1][7-(rx[1] & 0x07)] &= ~(1 << (i2*2+1));
+						}
+
+						update_display++;
+					} 
 				}
 			}
+		
+
 
 			// ====================== scan keypads =========================================
 			if(scan_keypads) {
@@ -514,9 +556,9 @@ int main(void)
 				button_last[keypad_row+16] = button_current[keypad_row+16];
 				button_last[keypad_row+24] = button_current[keypad_row+24];
 
-				_delay_us(2);				// wait for voltage fall! due to high resistance pullup
+				_delay_us(4);				// wait for voltage fall! due to high resistance pullup
 				PORTE |= (E7_LD);	
-				_delay_us(1);
+				_delay_us(2);
 
 				for(i2=0;i2<8;i2++) {
 					// =================================================
@@ -647,32 +689,45 @@ int main(void)
 				PORTB = keypad_row << 4;
 			}
 			
-			
+		
 			// ====================== check/send output data
 			
-			PORTD = 0;                      // setup PORTD for output
-			DDRD = 0xFF;
+			
 
-			while(output_read != output_write) {
-				PORTC |= C2_WR;
-				PORTD = output_buffer[output_read];
-				PORTC &= ~(C2_WR);
-				output_read++;// = (output_read + 1) % OUTPUT_BUFFER_LENGTH;
+			if(output_write) {
+				PORTD = 0;                      // setup PORTD for output
+				DDRD = 0xFF;
+
+				for(i1=0;i1<output_write;i1++) {
+					PORTC |= C2_WR;
+					PORTD = output_buffer[i1];
+					PORTC &= ~(C2_WR);
+				}
+
+				output_write = 0;
+			}
+
+
+			if(update_display) {
+				update_display = 0;
+				for(i1=0;i1<8;i1++) {
+					to_led(i1+1,display[0][i1],display[1][i1],display[2][i1],display[3][i1]);
+				}
 			}
 			
 
 			
-			// ====================== check usb/sleep status
-			if(PINC & C4_PWREN) {
-				sleep_state = 1;
-				TIMSK0 = 0; // turn off keypad checking int
+			// // ====================== check usb/sleep status
+			// if(PINC & C4_PWREN) {
+			// 	sleep_state = 1;
+			// 	TIMSK0 = 0; // turn off keypad checking int
 
-				for(i1=0;i1<16;i1++) {	// fade out
-					to_all_led(10, 15-i1);
-					_delay_ms(64);
-				}
-				to_all_led(12, 0);		// shutdown
-			} 
+			// 	for(i1=0;i1<16;i1++) {	// fade out
+			// 		to_all_led(10, 15-i1);
+			// 		_delay_ms(64);
+			// 	}
+			// 	to_all_led(12, 0);		// shutdown
+			// } 
 		} 		
 	}
 

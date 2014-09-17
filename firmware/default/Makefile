@@ -1,6 +1,6 @@
 CC=avr-gcc
 CFLAGS=-g -Os -Wall -mcall-prologues -mmcu=atmega325
-ALL_CFLAGS = -mmcu=$(MCU) -I. $(CFLAGS)
+ALL_CFLAGS = -mmcu=atmega325 -I. $(CFLAGS)
 LDFLAGS = -Wl,-Map=$(TARGET).map,--cref	
 OBJ2HEX=avr-objcopy 
 
@@ -8,7 +8,7 @@ OBJ2HEX=avr-objcopy
 #### enter your serial number below
 #### for windows users, enter com port, for example SERIAL = COM4
 
-SERIAL = /dev/tty.usbserial-m0000001
+SERIAL = /dev/tty.usbserial-m0000109
 
 
 
@@ -58,8 +58,8 @@ pro: $(TARGET).hex
 	avrdude -p m325 -b 115200 -P usb -c avrispmkII -e -D -U flash:w:$(TARGET).hex:i -U lfuse:w:0xff:m
 	#avarice --erase --program --file $(TARGET).hex --jtag /dev/tty.usbserial-1B1 --jtag-bitrate 500KHz --write-fuses fc89ef
 
-qpro: $(TARGET).hex
-	avrdude -p m325 -b 115200 -P usb -c avrispmkII -e -V -D -U flash:w:$(TARGET).hex:i
+flash: $(TARGET).hex
+	avrdude -p m325 -b 115200 -c usbtiny -F -e -V -D -U flash:w:$(TARGET).hex:i
 
 p: $(TARGET).hex
 	avrdude -p m325 -P usb -c avrispmkII -U lfuse:w:0xff:m -U hfuse:w:0x99:m -U efuse:w:0xff:m -U flash:w:$(TARGET).hex:i

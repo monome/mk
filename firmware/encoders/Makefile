@@ -1,6 +1,6 @@
 CC=avr-gcc
 CFLAGS=-g -Os -Wall -mcall-prologues -mmcu=atmega325
-ALL_CFLAGS = -mmcu=$(MCU) -I. $(CFLAGS)
+ALL_CFLAGS = -mmcu=atmega325 -I. $(CFLAGS)
 LDFLAGS = -Wl,-Map=$(TARGET).map,--cref	
 OBJ2HEX=avr-objcopy 
 
@@ -8,7 +8,7 @@ OBJ2HEX=avr-objcopy
 #### enter your serial number below
 #### for windows users, enter com port, for example SERIAL = COM4
 
-SERIAL = /dev/tty.usbserial-m0000001
+SERIAL = /dev/tty.usbserial-m0000776
 
 
 

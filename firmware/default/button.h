@@ -33,7 +33,7 @@
 #define kButtonUpEvent   0
 
 #define kButtonDownDefaultDebounceCount 0
-#define kButtonUpDefaultDebounceCount   8
+#define kButtonUpDefaultDebounceCount   24
 
 #define kButtonNewEvent   1
 #define kButtonNoEvent    0

@@ -8,7 +8,7 @@ OBJ2HEX=avr-objcopy
 #### enter your serial number below
 #### for windows users, enter com port, for example SERIAL = COM4
 
-SERIAL = /dev/tty.usbserial-m0000001
+SERIAL = /dev/tty.usbserial-m0000777
 
 
 

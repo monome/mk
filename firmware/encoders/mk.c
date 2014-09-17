@@ -110,9 +110,11 @@ const uint8_t packet_length[256] = {
 
 // tuning
 #define OUTPUT_BUFFER_LENGTH 256
-#define KEY_REFRESH_RATE 15
-#define AUX_REFRESH_RATE 5
+#define KEY_REFRESH_RATE 1
+#define AUX_REFRESH_RATE 10	
 #define RX_STARVE 20
+
+
 
 static const uint8_t rev[] =
 {
@@ -237,38 +239,15 @@ ISR(TIMER1_COMPA_vect)
 {
 	if(port_enable) {
 		n1 = PINA;
-		enc_now[0] = n1 & 0x03;
-		enc_delta[0] += map[enc_prev[0]][enc_now[0]];
-		enc_prev[0] = enc_now[0];
-	
-		enc_now[1] = (n1 & 0x0C)>>2;
-		enc_delta[1] += map[enc_prev[1]][enc_now[1]];
-		enc_prev[1] = enc_now[1];
-	
-		enc_now[2] = (n1 & 0x30)>>4;
-		enc_delta[2] += map[enc_prev[2]][enc_now[2]];
-		enc_prev[2] = enc_now[2];
-	
-		enc_now[3] = (n1 & 0xC0)>>6;
-		enc_delta[3] += map[enc_prev[3]][enc_now[3]];
-		enc_prev[3] = enc_now[3];
-	
-		n1 = PINF;
-		enc_now[4] = n1 & 0x03;
-		enc_delta[4] += map[enc_prev[4]][enc_now[4]];
-		enc_prev[4] = enc_now[4];
-	
-		enc_now[5] = (n1 & 0x0C)>>2;
-		enc_delta[5] += map[enc_prev[5]][enc_now[5]];
-		enc_prev[5] = enc_now[5];
-	
-		enc_now[6] = (n1 & 0x30)>>4;
-		enc_delta[6] += map[enc_prev[6]][enc_now[6]];
-		enc_prev[6] = enc_now[6];
-	
-		enc_now[7] = (n1 & 0xC0)>>6;
-		enc_delta[7] += map[enc_prev[7]][enc_now[7]];
-		enc_prev[7] = enc_now[7];
+		n2 = PINF;
+		
+		for(n3=0;n3<8;n3++) {
+			enc_now[n3] = (n1 & 1) | (n2 & 1)<<1;
+			enc_delta[n3] += map[enc_prev[n3]][enc_now[n3]];
+			enc_prev[n3] = enc_now[n3];
+			n1 >>= 1;
+			n2 >>= 1;
+		}
 	}
 	
 	TCNT1 = 0;
@@ -391,13 +370,13 @@ int main(void)
 	port_enable = 255;
 	
 	// keypad timer init
-	TCCR0A |= (1<<CS02) | (1<<CS00); // timer0 on, prescale clk/1024 (p95)
+	TCCR0A |= (1<<CS02); // timer0 on, prescale clk/1024 (p95)
 	TIMSK0 |= (1 << OCIE0A);// | (1<< TOIE0);  // enable timer0 interrupts
 	OCR0A = KEY_REFRESH_RATE;
 	
 	// aux timer init
 	TCCR1A = 0;
-	TCCR1B |= (1<<CS12);// | (1<<CS10); // clk/256
+	TCCR1B |= (1<<CS12) | (1<<CS10); // clk/256
 	TIMSK1 |= (1 << OCIE1A);
 	OCR1A = AUX_REFRESH_RATE;
 	
